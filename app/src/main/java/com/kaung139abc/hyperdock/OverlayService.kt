@@ -49,7 +49,7 @@ class OverlayService : Service() {
     private fun showDock() {
         if (!Settings.canDrawOverlays(this)) return
 
-        wm = getSystemService(WINDOW_SERVICE)
+        wm = getSystemService(WINDOW_SERVICE) as WindowManager
 
         val box = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
