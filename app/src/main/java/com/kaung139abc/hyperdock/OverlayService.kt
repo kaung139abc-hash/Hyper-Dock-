@@ -1,5 +1,6 @@
 package com.kaung139abc.hyperdock
 
+import android.app.ActivityOptions
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -12,6 +13,7 @@ import android.graphics.PixelFormat
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.IBinder
+import android.graphics.Rect
 import android.provider.Settings
 import android.view.Gravity
 import android.view.MotionEvent
@@ -27,7 +29,7 @@ class OverlayService : Service() {
     private var wm: WindowManager? = null
     private var dock: View? = null
     private var picker: View? = null
-    private val selected = mutableListOf<ApplicationInfo>()
+    private val launchedPackages = mutableListOf<String>()
 
     override fun onCreate() {
         super.onCreate()
@@ -169,12 +171,44 @@ class OverlayService : Service() {
     }
 
     private fun launchApp(app: ApplicationInfo) {
-        val intent = packageManager.getLaunchIntentForPackage(app.packageName)
-        if (intent != null) {
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val intent = packageManager.getLaunchIntentForPackage(app.packageName) ?: return
+        try {
+            val dm = resources.displayMetrics
+            val screenW = dm.widthPixels
+            val screenH = dm.heightPixels
+            val margin = (screenW * 0.04f).toInt()
+            val gap = (screenW * 0.03f).toInt()
+            val windowW = ((screenW - margin * 2 - gap) / 2).coerceAtLeast(320)
+            val top = (screenH * 0.10f).toInt()
+            val bottom = (screenH * 0.78f).toInt()
+            val index = launchedPackages.indexOf(app.packageName)
+            val left = if (index == 1) margin + windowW + gap else margin
+            val bounds = Rect(left, top, left + windowW, bottom)
+
+            intent.addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
+                    Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT
+            )
+
+            val options = if (Build.VERSION.SDK_INT >= 24) {
+                ActivityOptions.makeBasic().apply {
+                    setLaunchBounds(bounds)
+                }
+            } else null
+
+            closePicker()
+            if (options != null) startActivity(intent, options.toBundle())
+            else startActivity(intent)
+
+            if (!launchedPackages.contains(app.packageName)) {
+                if (launchedPackages.size >= 2) launchedPackages.removeAt(0)
+                launchedPackages.add(app.packageName)
+            }
+        } catch (_: Exception) {
+            closePicker()
             try {
-                closePicker()
-                startActivity(intent)
+                startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             } catch (_: Exception) {
                 showPicker()
             }
