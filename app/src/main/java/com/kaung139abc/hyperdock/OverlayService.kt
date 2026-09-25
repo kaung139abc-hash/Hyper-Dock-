@@ -96,82 +96,87 @@ class OverlayService : Service() {
 
     private fun showPicker() {
         if (picker != null) return
+
         val panel = LinearLayout(this).apply {
-            orientation=LinearLayout.VERTICAL
-            setPadding(12,12,12,12)
-            background=bg(Color.rgb(22,24,31),24f)
-            elevation=20f
+            orientation = LinearLayout.VERTICAL
+            setPadding(12, 12, 12, 12)
+            background = bg(Color.rgb(22, 24, 31), 24f)
+            elevation = 20f
         }
-        val head=LinearLayout(this).apply { gravity=Gravity.CENTER_VERTICAL }
+
+        val head = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
         head.addView(TextView(this).apply {
-            text="Choose apps (" + selected.size + "/2)"
-            textSize=17f; setTextColor(Color.WHITE)
-            layoutParams=LinearLayout.LayoutParams(0,-2,1f)
+            text = "HYPER APPS"
+            textSize = 17f
+            setTextColor(Color.WHITE)
+            layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
         })
         head.addView(TextView(this).apply {
-            text="×"; textSize=25f; setTextColor(Color.WHITE)
-            setPadding(18,4,8,4); setOnClickListener { closePicker() }
+            text = "×"
+            textSize = 25f
+            setTextColor(Color.WHITE)
+            setPadding(18, 4, 8, 4)
+            setOnClickListener { closePicker() }
         })
         panel.addView(head)
 
-        val launch=Button(this).apply {
-            text=if(selected.size==2) "OPEN BOTH APPS" else "SELECT 2 APPS"
-            isEnabled=selected.size==2
-            setOnClickListener { launchSelected() }
+        val scroll = ScrollView(this)
+        val list = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
         }
-        panel.addView(launch, LinearLayout.LayoutParams(-1,52))
 
-        val scroll=ScrollView(this)
-        val list=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL }
-        val pm=packageManager
-        val apps=pm.getInstalledApplications(0).filter {
-            (it.flags and ApplicationInfo.FLAG_SYSTEM)==0 &&
-            pm.getLaunchIntentForPackage(it.packageName)!=null
-        }.sortedBy { pm.getApplicationLabel(it).toString().lowercase() }
+        val pm = packageManager
+        val apps = pm.getInstalledApplications(0).filter {
+            (it.flags and ApplicationInfo.FLAG_SYSTEM) == 0 &&
+            pm.getLaunchIntentForPackage(it.packageName) != null
+        }.sortedBy {
+            pm.getApplicationLabel(it).toString().lowercase()
+        }
 
         apps.forEach { app ->
-            val chosen=selected.any { it.packageName==app.packageName }
-            val row=LinearLayout(this).apply {
-                orientation=LinearLayout.HORIZONTAL
-                gravity=Gravity.CENTER_VERTICAL
-                setPadding(8,10,8,10)
-                background=if(chosen) bg(Color.rgb(45,55,75),16f) else null
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(8, 10, 8, 10)
+                background = bg(Color.rgb(30, 33, 42), 16f)
                 setOnClickListener {
-                    if (selected.any { it.packageName==app.packageName }) {
-                        selected.removeAll { it.packageName==app.packageName }
-                    } else {
-                        if(selected.size>=2) selected.removeAt(0)
-                        selected.add(app)
-                    }
-                    closePicker()
-                    showPicker()
+                    launchApp(app)
                 }
             }
+
             row.addView(ImageView(this).apply {
                 setImageDrawable(pm.getApplicationIcon(app))
-                layoutParams=LinearLayout.LayoutParams(48,48)
+                layoutParams = LinearLayout.LayoutParams(48, 48)
             })
+
             row.addView(TextView(this).apply {
-                text=pm.getApplicationLabel(app).toString() + if(chosen) "  ✓" else ""
-                textSize=15f; setTextColor(Color.WHITE); setPadding(14,0,8,0)
-                layoutParams=LinearLayout.LayoutParams(0,-2,1f)
+                text = pm.getApplicationLabel(app).toString()
+                textSize = 15f
+                setTextColor(Color.WHITE)
+                setPadding(14, 0, 8, 0)
+                layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
             })
+
             list.addView(row)
         }
+
         scroll.addView(list)
-        panel.addView(scroll, LinearLayout.LayoutParams(300,520))
-        val p=params(324,-2,18,150)
-        wm?.addView(panel,p); picker=panel
+        panel.addView(scroll, LinearLayout.LayoutParams(300, 520))
+
+        val p = params(324, -2, 18, 150)
+        wm?.addView(panel, p)
+        picker = panel
     }
 
-    private fun launchSelected() {
-        closePicker()
-        if(selected.isEmpty()) return
-        selected.forEachIndexed { index, app ->
-            packageManager.getLaunchIntentForPackage(app.packageName)?.let { intent ->
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
-                if(index==1) intent.addFlags(Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT)
-                try { startActivity(intent) } catch (_: Exception) {}
+    private fun launchApp(app: ApplicationInfo) {
+        val intent = packageManager.getLaunchIntentForPackage(app.packageName)
+        if (intent != null) {
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            try {
+                closePicker()
+                startActivity(intent)
+            } catch (_: Exception) {
+                showPicker()
             }
         }
     }
