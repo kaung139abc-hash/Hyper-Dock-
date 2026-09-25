@@ -2,12 +2,24 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
-    <application android:theme="@style/Theme.HyperDock" android:label="Hyper Dock" android:icon="@drawable/ic_hyperdock">
+
+    <application
+        android:theme="@style/Theme.HyperDock"
+        android:label="Hyper Dock"
+        android:icon="@drawable/ic_hyperdock">
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
-                <action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
-        <service android:name=".OverlayService" android:exported="false" android:foregroundServiceType="specialUse"/>
+        <service
+            android:name=".OverlayService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Floating dock overlay for user-requested multitasking"/>
+        </service>
     </application>
 </manifest>
